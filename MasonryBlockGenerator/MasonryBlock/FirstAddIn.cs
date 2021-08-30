@@ -170,14 +170,56 @@ namespace MasonryBlock
             mySW.Dispose();
         }
 
+        [CommandMethod("SBR")]
+        public void SBR()
+        {
+            double lineWt = 0.03;
+
+            // Uses Autodesk.AutoCAD.DatabaseServices
+            Database myDB;
+            myDB = HostApplicationServices.WorkingDatabase;
+
+            Editor myEd = Autodesk.AutoCAD.ApplicationServices.Application.DocumentManager.MdiActiveDocument.Editor;
+            Point3d pt1 = myEd.GetPoint("First point:").Value;
+            Point3d pt2 = myEd.GetPoint("Second point:").Value;
+            Point3d temp;
+
+            // if pt2 is left and below pt1 swap the points.
+            if(pt1.X >= pt2.X)
+            {
+                if(pt1.Y > pt2.Y)
+                {
+                    temp = pt1;
+                    pt1 = pt2;
+                    pt2 = temp;
+                }
+            }
+
+            // Draw the break line between the two points
+            using (Transaction myTrans = myDB.TransactionManager.StartTransaction())
+            {
+                // This call must be inside a Transaction
+                BlockTableRecord myBTR = (BlockTableRecord)myDB.CurrentSpaceId.GetObject(OpenMode.ForWrite);
+
+                // Draw the breakline
+                Polyline myPline = AutoCAD_DrawHelp.DrawHelp.DrawBreakLine(
+                    new Point2d(pt1.X, pt1.Y), new Point2d(pt2.X, pt2.Y), lineWt);
+                myBTR.AppendEntity(myPline);
+                myTrans.AddNewlyCreatedDBObject(myPline, true);
+                myTrans.Commit();
+            }
+        }
+
         [CommandMethod("CMU")]
         public void CMU()
         {
             double lineWt = 0.03;
             int numBlocksHigh = 4;
-            double blockHt = 5.625;
-            double blockWid = 5.625;
+            double blockHt = 7.625;
+            double blockWid = 7.625;
             double blockLen = 15.625;
+            double blockShellThick = 1.25;
+            double blockWebThick = 0.75;
             double mortarThick = 0.375;
 
             // Uses Autodesk.AutoCAD.DatabaseServices
@@ -220,7 +262,7 @@ namespace MasonryBlock
                     Matrix3d ucs = myEd.CurrentUserCoordinateSystem;
 
                     // Draw the mortar joint
-                    Polyline myPline1 = AutoCAD_DrawHelp.DrawHelp.DrawUniformMortarJoint(ins, blockWid, blockHt, mortarThick, ucs, lineWt);
+                    Polyline myPline1 = AutoCAD_DrawHelp.DrawHelp.DrawUniformMortarJointHorizontal(ins, blockWid, blockHt, mortarThick, ucs, lineWt);
                     myBTR.AppendEntity(myPline1);
                     myTrans.AddNewlyCreatedDBObject(myPline1, true);
 
@@ -303,7 +345,7 @@ namespace MasonryBlock
                         myTrans2.AddNewlyCreatedDBObject(myPline3, true);
 
                         // Draw the mortar joint
-                        Polyline myPline4 = AutoCAD_DrawHelp.DrawHelp.DrawUniformMortarJoint(ins, blockWid, blockHt, mortarThick, ucs, lineWt);
+                        Polyline myPline4 = AutoCAD_DrawHelp.DrawHelp.DrawUniformMortarJointHorizontal(ins, blockWid, blockHt, mortarThick, ucs, lineWt);
                         myBTR.AppendEntity(myPline4);
                         myTrans2.AddNewlyCreatedDBObject(myPline4, true);
                     }
@@ -334,6 +376,64 @@ namespace MasonryBlock
 
                 // Commit the changes
                 myTrans2.Commit();
+            }
+
+            // Draws the cross section.
+            using (Transaction myTrans3 = myDB.TransactionManager.StartTransaction())
+            {
+                // repair the blockname in case decimal points appear
+                string blockName = SymbolUtilityServices.RepairSymbolName(blockWid + "X" + blockHt + "X" + blockLen + "_" + numBlocksHigh + "H_CrossSection", false); ;
+
+                // This call must be inside a Transaction
+                BlockTableRecord myBTR = (BlockTableRecord)myDB.CurrentSpaceId.GetObject(OpenMode.ForWrite);
+
+                //BlockTable bt = (BlockTable)myTrans.GetObject(myDB.BlockTableId, OpenMode.ForRead);
+                //BlockTableRecord block;
+                //if (bt.Has(blockName))
+                //{
+                //    MessageBox.Show("Block name " + blockName + "already exists");
+                //    return;
+                //
+
+                //// Create a block entity;
+                //myTrans.GetObject(myDB.BlockTableId, OpenMode.ForWrite);
+                //block = new BlockTableRecord();
+                //block.Name = blockName;
+                //var blockId = bt.Add(block);
+                //myTrans.AddNewlyCreatedDBObject(block, true);
+
+                // Create our CMU list of polylines
+                List<Polyline> list1 = AutoCAD_DrawHelp.DrawHelp.DrawCMUTop(new Point2d(insertPoint.X + 100, insertPoint.Y), 2, blockWid, blockLen, blockShellThick, blockWebThick, lineWt);
+                foreach (Polyline item in list1)
+                { 
+                    myBTR.AppendEntity(item);
+                    myTrans3.AddNewlyCreatedDBObject(item, true);
+                }
+
+                // Create our CMU list of polylines
+                List<Polyline> list2 = AutoCAD_DrawHelp.DrawHelp.DrawCMUTop(new Point2d(insertPoint.X + 100, insertPoint.Y + 15), 3, blockWid, blockLen, blockShellThick, blockWebThick, lineWt);
+                foreach (Polyline item in list2)
+                {
+                    myBTR.AppendEntity(item);
+                    myTrans3.AddNewlyCreatedDBObject(item, true);
+                }
+
+                // Create our CMU list of polylines
+                List<Polyline> list3= AutoCAD_DrawHelp.DrawHelp.DrawCMUTop(new Point2d(insertPoint.X + 100, insertPoint.Y + 30), 4, blockWid, blockLen, blockShellThick, blockWebThick, lineWt);
+                foreach (Polyline item in list3)
+                {
+                    myBTR.AppendEntity(item);
+                    myTrans3.AddNewlyCreatedDBObject(item, true);
+                }
+
+                // Draw mortar joint
+                Matrix3d ucs = myEd.CurrentUserCoordinateSystem;
+                Polyline myPline8 = AutoCAD_DrawHelp.DrawHelp.DrawUniformMortarJointVertical(new Point2d(insertPoint.X + 10 * blockLen + blockLen, insertPoint.Y), blockWid, blockHt, mortarThick, ucs, lineWt);
+                myBTR.AppendEntity(myPline8);
+                myTrans3.AddNewlyCreatedDBObject(myPline8, true);
+
+                // Commit the changes
+                myTrans3.Commit();
             }
         }
     }
