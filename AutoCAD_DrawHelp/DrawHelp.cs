@@ -14,6 +14,7 @@ namespace AutoCAD_DrawHelp
 {
     public static class DrawHelp
     {
+        const double WALL_SECTION_GAP = 0.1;         // percentage of block height to make gaps on wall sections
         /// <summary>
         /// Draws an AutoCAD rectangular polyline
         /// </summary>
@@ -42,7 +43,7 @@ namespace AutoCAD_DrawHelp
         }
 
         /// <summary>
-        /// Draws an AutoCAD polyline rectangle with a cut section at the top
+        /// Draws an AutoCAD polyline rectangle with a cut section at the top of a block
         /// </summary>
         /// <param name="pt1">lower left point of the block</param>
         /// <param name="blockWid">width of the rectangle</param>
@@ -54,22 +55,25 @@ namespace AutoCAD_DrawHelp
         {
             Polyline myPline2 = new Polyline();
 
-
             myPline2.SetDatabaseDefaults();
 
             // Draw the bottom of the block
-            myPline2.AddVertexAt(0, new Point2d(pt1.X, pt1.Y + offset), 0, lineWt, lineWt);
-            myPline2.AddVertexAt(1, new Point2d(pt1.X + blockWid, pt1.Y + offset), 0, lineWt, lineWt);
+            myPline2.AddVertexAt(0, new Point2d(pt1.X + (0.0 * blockWid), pt1.Y + offset + 0.0 * blockHt), 0, lineWt, lineWt);
+            myPline2.AddVertexAt(1, new Point2d(pt1.X + (1.0 * blockWid), pt1.Y + offset + 0.0 * blockHt), 0, lineWt, lineWt);
 
-            // draw the section block
-            myPline2.AddVertexAt(2, new Point2d(pt1.X + blockWid, pt1.Y + offset + (0.2 + 0.3) * blockHt), 0, lineWt, lineWt);
-            myPline2.AddVertexAt(3, new Point2d(pt1.X + (0.57 * blockWid), pt1.Y + offset + (0.2 + 0.57 * 0.3) * blockHt), 0, lineWt, lineWt);
+            // Start of cut line
+            myPline2.AddVertexAt(2, new Point2d(pt1.X + (1.0 * blockWid),  pt1.Y + offset + (0.35 - WALL_SECTION_GAP / 2.0 + 1.0 * 0.3 ) * blockHt), 0, lineWt, lineWt);
+            myPline2.AddVertexAt(3, new Point2d(pt1.X + (0.57 * blockWid), pt1.Y + offset + (0.35 - WALL_SECTION_GAP / 2.0 + 0.57 * 0.3 ) * blockHt), 0, lineWt, lineWt);
+            myPline2.AddVertexAt(4, new Point2d(pt1.X + (0.52 * blockWid), pt1.Y + offset + (0.35 - WALL_SECTION_GAP / 2.0 + 0.52 * 0.3 + 0.07 ) * blockHt), 0, lineWt, lineWt);
+                                                                                             
+            myPline2.AddVertexAt(5, new Point2d(pt1.X + (0.50 * blockWid), pt1.Y + offset + (0.35 - WALL_SECTION_GAP / 2.0 + 0.50 * 0.3 ) * blockHt), 0, lineWt, lineWt);
+                                                                                             
+            myPline2.AddVertexAt(6, new Point2d(pt1.X + (0.48 * blockWid), pt1.Y + offset + (0.35 - WALL_SECTION_GAP / 2.0 + 0.48 * 0.3 - 0.07 ) * blockHt), 0, lineWt, lineWt);     
+            myPline2.AddVertexAt(7, new Point2d(pt1.X + (0.43 * blockWid), pt1.Y + offset + (0.35 - WALL_SECTION_GAP / 2.0 + 0.43 * 0.3 ) * blockHt), 0, lineWt, lineWt);
+            
+            // End of cut line
+            myPline2.AddVertexAt(8, new Point2d(pt1.X + (0.0 * blockWid),  pt1.Y + offset + (0.35 - WALL_SECTION_GAP / 2.0 + 0.0 * 0.3 ) * blockHt), 0, lineWt, lineWt);
 
-            myPline2.AddVertexAt(4, new Point2d(pt1.X + (0.5 * blockWid), pt1.Y + offset + (0.2 + 0.5 * 0.3 + 0.15) * blockHt), 0, lineWt, lineWt);
-            myPline2.AddVertexAt(5, new Point2d(pt1.X + (0.5 * blockWid), pt1.Y + offset + (0.2 + 0.5 * 0.3 - 0.15) * blockHt), 0, lineWt, lineWt);
-
-            myPline2.AddVertexAt(6, new Point2d(pt1.X + (0.43 * blockWid), pt1.Y + offset + (0.2 + 0.43 * 0.3) * blockHt), 0, lineWt, lineWt);
-            myPline2.AddVertexAt(7, new Point2d(pt1.X, pt1.Y + offset + 0.2 * blockHt), 0, lineWt, lineWt);
             myPline2.Closed = true; // Close the polyline
 
             if (!(myPline2.Closed || myPline2.GetPoint2dAt(0).IsEqualTo(myPline2.GetPoint2dAt(myPline2.NumberOfVertices - 1))))
@@ -78,13 +82,65 @@ namespace AutoCAD_DrawHelp
             return myPline2;
         }
 
+        /// <summary>
+        /// Draws an AutoCAD polyline rectangle with a cut section at the bottom of a block
+        /// </summary>
+        /// <param name="pt1">lower left point of the block</param>
+        /// <param name="blockWid">width of the rectangle</param>
+        /// <param name="blockHt">height of the rectangle</param>
+        /// <param name="offset">vertical offset (mortar thickness of CMU)</param>
+        /// <param name="lineWt">thickness of the line to be drawn</param>
+        /// <returns>Returns an AutoCAD polyline object</returns>
+        public static Polyline DrawRectangleClippedBottom(Point2d pt1, double blockWid, double blockHt, double offset, double lineWt)
+        {
+            Polyline myPline2 = new Polyline();
+
+            myPline2.SetDatabaseDefaults();
+
+            // Draw the bottom of the block
+            
+            // Start of cut line
+            myPline2.AddVertexAt(0, new Point2d(pt1.X + (0.0 * blockWid) , pt1.Y + offset + (0.35 + WALL_SECTION_GAP / 2.0 + 0.0 * 0.3 ) * blockHt), 0, lineWt, lineWt);
+            myPline2.AddVertexAt(1, new Point2d(pt1.X + (0.43 * blockWid), pt1.Y + offset + (0.35 + WALL_SECTION_GAP / 2.0 + 0.43 * 0.3 ) * blockHt), 0, lineWt, lineWt);
+            myPline2.AddVertexAt(2, new Point2d(pt1.X + (0.48 * blockWid), pt1.Y + offset + (0.35 + WALL_SECTION_GAP / 2.0 + 0.48 * 0.3 - 0.07 ) * blockHt), 0, lineWt, lineWt);
+                                                                                             
+            myPline2.AddVertexAt(3, new Point2d(pt1.X + (0.50 * blockWid), pt1.Y + offset + (0.35 + WALL_SECTION_GAP / 2.0 + 0.50 * 0.3 ) * blockHt), 0, lineWt, lineWt);
+            myPline2.AddVertexAt(4, new Point2d(pt1.X + (0.52 * blockWid), pt1.Y + offset + (0.35 + WALL_SECTION_GAP / 2.0 + 0.52 * 0.3 + 0.07) * blockHt), 0, lineWt, lineWt);
+            myPline2.AddVertexAt(5, new Point2d(pt1.X + (0.57 * blockWid), pt1.Y + offset + (0.35 + WALL_SECTION_GAP / 2.0 + 0.57 * 0.3 ) * blockHt), 0, lineWt, lineWt);
+
+            // End of cut line
+            myPline2.AddVertexAt(6, new Point2d(pt1.X + (1.0 * blockWid),  pt1.Y + offset + (0.35 + WALL_SECTION_GAP / 2.0 + 1.0 * 0.3 ) * blockHt), 0, lineWt, lineWt);
+
+            myPline2.AddVertexAt(7, new Point2d(pt1.X + (1.0 * blockWid),  pt1.Y + offset + (1.0 * blockHt)), 0, lineWt, lineWt);
+            myPline2.AddVertexAt(8, new Point2d(pt1.X + (0.0 * blockWid), pt1.Y + offset + (1.0 * blockHt)), 0, lineWt, lineWt);
+
+            myPline2.Closed = true; // Close the polyline
+
+            if (!(myPline2.Closed || myPline2.GetPoint2dAt(0).IsEqualTo(myPline2.GetPoint2dAt(myPline2.NumberOfVertices - 1))))
+                throw new InvalidOperationException("Opened polyline in myPline2.");
+
+            return myPline2;
+        }
+
+
+        /// <summary>
+        /// Draws a mortar joint of thickness 'offset' at the insert point
+        /// </summary>
+        /// <param name="insertPoint">the lower left corner of the mortar joint</param>
+        /// <param name="blockWid">the width of the CMU block</param>
+        /// <param name="blockHt">the height og the CMU block</param>
+        /// <param name="offset">thickness of the mortar joint</param>
+        /// <param name="ucs">UCS for the drawing system.  Needed for orienting the arcs in space.  Typically an identiy matrix.</param>
+        /// <param name="lineWt">weight of the lines when drawn</param>
+        /// <returns></returns>
         public static Polyline DrawUniformMortarJoint(Point2d insertPoint, double blockWid, double blockHt, double offset, Matrix3d ucs, double lineWt)
         {
             Polyline myPline1 = new Polyline();
 
             // for points
             //   pt4 ------------------- pt3
-            //    |                       |
+            //   \                       /
+            //   /                       \
             //   pt1 ------------------- pt2
             Point2d pt1 = new Point2d(insertPoint.X, insertPoint.Y);
             Point2d pt2 = new Point2d(insertPoint.X + blockWid, insertPoint.Y);
