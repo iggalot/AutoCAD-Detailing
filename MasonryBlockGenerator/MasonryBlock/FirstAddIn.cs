@@ -22,22 +22,23 @@ namespace MasonryBlock
             MessageBox.Show("Test Command");
         }
 
-        [CommandMethod("Command2",CommandFlags.Session)]
+        [CommandMethod("Command2", CommandFlags.Session)]
         public void Command2()
         {
             MessageBox.Show("Session Flag means the command can cross multiple documents.");
         }
 
-        [CommandMethod("Command3",CommandFlags.UsePickSet)]
+        [CommandMethod("Command3", CommandFlags.UsePickSet)]
         public void Command3()
         {
             Document myDoc = Autodesk.AutoCAD.ApplicationServices.Application.DocumentManager.MdiActiveDocument;
             Editor myEd = myDoc.Editor;
             PromptSelectionResult myPSR = myEd.SelectImplied();
-            if(myPSR.Status == PromptStatus.OK)
+            if (myPSR.Status == PromptStatus.OK)
             {
                 MessageBox.Show(myPSR.Value.Count.ToString() + " selected.");
-            } else
+            }
+            else
             {
                 MessageBox.Show("0 selected.");
             }
@@ -82,7 +83,7 @@ namespace MasonryBlock
         List<string> GetBlockNames(Database DBIn)
         {
             List<string> retList = new List<string>();
-            using(Transaction myTrans = DBIn.TransactionManager.StartTransaction())
+            using (Transaction myTrans = DBIn.TransactionManager.StartTransaction())
             {
                 BlockTable myBT = (BlockTable)DBIn.BlockTableId.GetObject(OpenMode.ForRead);
                 foreach (ObjectId myOID in myBT)
@@ -110,7 +111,8 @@ namespace MasonryBlock
                     retCollection = (ObjectIdCollection)myBTR.GetBlockReferenceIds(true, true);
                     myTrans.Commit();
                     return retCollection;
-                } else
+                }
+                else
                 {
                     myTrans.Commit();
                     return retCollection;
@@ -118,16 +120,17 @@ namespace MasonryBlock
             }
         }
 
-        Dictionary<string,string> GetAttributes(ObjectId BlockRefID)
+        Dictionary<string, string> GetAttributes(ObjectId BlockRefID)
         {
             Dictionary<string, string> retDictionary = new Dictionary<string, string>();
             using (Transaction myTrans = BlockRefID.Database.TransactionManager.StartTransaction())
             {
                 BlockReference MyBref = (BlockReference)BlockRefID.GetObject(OpenMode.ForRead);
-                if(MyBref.AttributeCollection.Count == 0)
+                if (MyBref.AttributeCollection.Count == 0)
                 {
                     return retDictionary;
-                } else
+                }
+                else
                 {
                     foreach (ObjectId myBRefID in MyBref.AttributeCollection)
                     {
@@ -146,7 +149,7 @@ namespace MasonryBlock
         public void Command7()
         {
             System.IO.FileInfo myFIO = new System.IO.FileInfo("C:\\Users\\jallen\\Documents\\Programming\\AutoCAD\\blocks.txt");
-            if(myFIO.Directory.Exists==false)
+            if (myFIO.Directory.Exists == false)
             {
                 myFIO.Directory.Create();
             }
@@ -157,7 +160,7 @@ namespace MasonryBlock
                 foreach (ObjectId myBrefID in GetBlockIDs(dbToUse, myName))
                 {
                     mySW.WriteLine(" " + myName);
-                    foreach (KeyValuePair<string,string> myKVP in GetAttributes(myBrefID))
+                    foreach (KeyValuePair<string, string> myKVP in GetAttributes(myBrefID))
                     {
                         mySW.WriteLine("   " + myKVP.Key + "   " + myKVP.Value);
                     }
@@ -170,14 +173,12 @@ namespace MasonryBlock
         [CommandMethod("CMU")]
         public void CMU()
         {
-
             double lineWt = 0.03;
             int numBlocksHigh = 4;
             double blockHt = 5.625;
             double blockWid = 5.625;
             double blockLen = 15.625;
             double mortarThick = 0.375;
-
 
             // Uses Autodesk.AutoCAD.DatabaseServices
             Database myDB;
@@ -209,126 +210,53 @@ namespace MasonryBlock
                 // draw the blocks
                 for (int i = 0; i < numBlocksHigh; i++)
                 {
-                    // for points
-                    //   pt4 ------------------- pt3
-                    //    |                       |
-                    //   pt1 ------------------- pt2
-                    Point2d pt1 = new Point2d(insertPoint.X, insertPoint.Y + i * (blockHt + mortarThick));
-                    Point2d pt2 = new Point2d(insertPoint.X + blockWid, insertPoint.Y + i * (blockHt + mortarThick));
-                    Point2d pt3 = new Point2d(insertPoint.X + blockWid, insertPoint.Y + mortarThick + i * (blockHt + mortarThick));
-                    Point2d pt4 = new Point2d(insertPoint.X, insertPoint.Y + mortarThick + i * (blockHt + mortarThick));
+                    Point2d ins = new Point2d(insertPoint.X, insertPoint.Y + i * (blockHt + mortarThick));
+                    Matrix3d ucs = myEd.CurrentUserCoordinateSystem;
 
-                    // draw the mortar layer
-                    Polyline myPline1 = new Polyline();
-                    myPline1.SetDatabaseDefaults();
-                    myPline1.AddVertexAt(0, pt1, 0, lineWt, lineWt);
-                    myPline1.AddVertexAt(1, pt2, 0, lineWt, lineWt);
-
-                    using (Arc myArc1 = new Arc())
-                    {
-                        Point3d startPoint = new Point3d(pt2.X, pt2.Y, 0);
-                        Point3d endPoint = new Point3d(pt3.X, pt3.Y, 0);
-
-                        Matrix3d ucs = myEd.CurrentUserCoordinateSystem;
-                        myArc1.TransformBy(ucs);
-
-                        myArc1.Center = new Point3d(pt2.X + (pt3.X - pt2.X) / 2.0, pt2.Y + (pt3.Y - pt2.Y) / 2.0, 0);
-                        myArc1.Radius = 0.5 * mortarThick;
-
-                        Matrix3d ocs2wcs = Matrix3d.PlaneToWorld(myArc1.Normal);
-                        Plane plane = new Plane(ocs2wcs.CoordinateSystem3d.Origin, ocs2wcs.CoordinateSystem3d.Xaxis, ocs2wcs.CoordinateSystem3d.Yaxis);
-
-                        myArc1.StartAngle = -(startPoint - myArc1.Center).AngleOnPlane(plane);
-                        myArc1.EndAngle = -(endPoint - myArc1.Center).AngleOnPlane(plane);
-
-                        myPline1.JoinEntity(myArc1);
-                    }
-
-                    myPline1.AddVertexAt(2, pt3, 0, lineWt, lineWt);
-                    myPline1.AddVertexAt(3, pt4, 0, lineWt, lineWt);
-
-                    using (Arc myArc1 = new Arc())
-                    {
-                        Point3d startPoint = new Point3d(pt4.X, pt4.Y, 0);
-                        Point3d endPoint = new Point3d(pt1.X, pt1.Y, 0);
-
-                        Matrix3d ucs = myEd.CurrentUserCoordinateSystem;
-                        myArc1.TransformBy(ucs);
-
-                        myArc1.Center = new Point3d(pt4.X + (pt1.X - pt4.X) / 2.0, pt4.Y + (pt1.Y - pt4.Y) / 2.0, 0);
-                        myArc1.Radius = 0.5 * mortarThick;
-
-                        Matrix3d ocs2wcs = Matrix3d.PlaneToWorld(myArc1.Normal);
-                        Plane plane = new Plane(ocs2wcs.CoordinateSystem3d.Origin, ocs2wcs.CoordinateSystem3d.Xaxis, ocs2wcs.CoordinateSystem3d.Yaxis);
-
-                        myArc1.StartAngle = -(startPoint - myArc1.Center).AngleOnPlane(plane);
-                        myArc1.EndAngle = -(endPoint - myArc1.Center).AngleOnPlane(plane);
-
-                        myPline1.JoinEntity(myArc1);
-                    }
-
-                    myPline1.Closed = true; ; // Close the polyline
-
-                    // adds to our block object
-                    //block.AppendEntity(myPline1);
-
-                    // adds to current space (either model or paper)
+                    // Draw the mortar joint
+                    Polyline myPline1 = AutoCAD_DrawHelp.DrawHelp.DrawUniformMortarJoint(ins, blockWid, blockHt, mortarThick, ucs, 0.03);
                     myBTR.AppendEntity(myPline1);
                     myTrans.AddNewlyCreatedDBObject(myPline1, true);
 
-                    // Draw the CMU block
-                    using (Polyline myPline2 = new Polyline())
+                    // Draw the block
+
+
+                    // the top block is a section
+                    if (i < numBlocksHigh - 1)
                     {
-                        myPline2.SetDatabaseDefaults();
-                        myPline2.AddVertexAt(0, new Point2d(pt1.X, pt1.Y + mortarThick), 0, lineWt, lineWt);
-                        myPline2.AddVertexAt(1, new Point2d(pt1.X + blockWid, pt1.Y + mortarThick), 0, lineWt, lineWt);
-
-                        // the top block is a section
-                        if (i < numBlocksHigh - 1)
-                        {
-                            // draw normal full block
-                            myPline2.AddVertexAt(2, new Point2d(pt1.X + blockWid, pt1.Y + mortarThick + blockHt), 0, lineWt, lineWt);
-                            myPline2.AddVertexAt(3, new Point2d(pt1.X, pt1.Y + mortarThick + blockHt), 0, lineWt, lineWt);
-                            myPline2.Closed = true; // Close the polyline
-                        }
-                        else
-                        {
-                            // draw the section block
-                            myPline2.AddVertexAt(2, new Point2d(pt1.X + blockWid, pt1.Y + mortarThick + (0.2 + 0.3) * blockHt), 0, lineWt, lineWt);
-                            myPline2.AddVertexAt(3, new Point2d(pt1.X + (0.57 * blockWid), pt1.Y + mortarThick + (0.2 + 0.57 * 0.3) * blockHt), 0, lineWt, lineWt);
-
-                            myPline2.AddVertexAt(4, new Point2d(pt1.X + (0.5 * blockWid), pt1.Y + mortarThick + (0.2 + 0.5 * 0.3 + 0.15) * blockHt), 0, lineWt, lineWt);
-                            myPline2.AddVertexAt(5, new Point2d(pt1.X + (0.5 * blockWid), pt1.Y + mortarThick + (0.2 + 0.5 * 0.3 - 0.15) * blockHt), 0, lineWt, lineWt);
-
-                            myPline2.AddVertexAt(6, new Point2d(pt1.X + (0.43 * blockWid), pt1.Y + mortarThick + (0.2 + 0.43 * 0.3) * blockHt), 0, lineWt, lineWt);
-                            myPline2.AddVertexAt(7, new Point2d(pt1.X, pt1.Y + mortarThick + 0.2 * blockHt), 0, lineWt, lineWt);
-                            myPline2.Closed = true; // Close the polyline
-
-                            if (!(myPline2.Closed || myPline2.GetPoint2dAt(0).IsEqualTo(myPline2.GetPoint2dAt(myPline2.NumberOfVertices - 1))))
-                                throw new InvalidOperationException("Opened polyline in myPline2.");
-                        }
-
-                        //block.AppendEntity(myPline2);
+                        // Draw full rectangle
+                        Polyline myPline2 = AutoCAD_DrawHelp.DrawHelp.DrawRectangle(ins, blockWid, blockHt, mortarThick, 0.03);
                         myBTR.AppendEntity(myPline2);
                         myTrans.AddNewlyCreatedDBObject(myPline2, true);
-
-                        //var ids = new ObjectIdCollection();
-                        //ids.Add(myPline2.ObjectId);
-
-                        // Create the hatch
-                        //Hatch hatch = new Hatch() { Layer = "0", PatternScale = 0.5, ColorIndex = 1 };
-                        //hatch.SetHatchPattern(HatchPatternType.PreDefined, "ANSI31");
-                        //block.AppendEntity(hatch);
-                        //myTrans.AddNewlyCreatedDBObject(hatch, true);
-                        //hatch.Associative = true;
-                        //hatch.AppendLoop(HatchLoopTypes.Default, ids);
-                        //hatch.EvaluateHatch(true);
                     }
+                    else
+                    {
+                        // Draw the clipped block
+                        Polyline myPline2 = AutoCAD_DrawHelp.DrawHelp.DrawRectangleClippedTop(ins, blockWid, blockHt, mortarThick, 0.03);
+                        myBTR.AppendEntity(myPline2);
+                        myTrans.AddNewlyCreatedDBObject(myPline2, true);
+                    }
+
+                    ////block.AppendEntity(myPline2);
+                    //myBTR.AppendEntity(myPline2);
+                    //myTrans.AddNewlyCreatedDBObject(myPline2, true);
+
+                    //var ids = new ObjectIdCollection();
+                    //ids.Add(myPline2.ObjectId);
+
+                    // Create the hatch
+                    //Hatch hatch = new Hatch() { Layer = "0", PatternScale = 0.5, ColorIndex = 1 };
+                    //hatch.SetHatchPattern(HatchPatternType.PreDefined, "ANSI31");
+                    //block.AppendEntity(hatch);
+                    //myTrans.AddNewlyCreatedDBObject(hatch, true);
+                    //hatch.Associative = true;
+                    //hatch.AppendLoop(HatchLoopTypes.Default, ids);
+                    //hatch.EvaluateHatch(true);
                 }
 
                 // Commit the changes
                 myTrans.Commit();
             }
         }
-    } 
+    }
 }
