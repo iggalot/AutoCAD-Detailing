@@ -275,9 +275,19 @@ namespace AutoCAD_DrawHelp
             double breakOffsetVert = Math.Max(0.05 * ver, 0.5);
             double breakOffsetHoriz = Math.Max(0.05 * hor, 0.5);
 
-            double[] h = { 0.00 * hor, 0.46 * hor, 0.46 * hor, 0.50 * hor, 0.54 * hor, 0.54 * hor, 1.00 * hor };
-            double[] v = { 0.00 * ver, 0.46 * ver, 0.46 * ver - breakOffsetVert, 0.50 * ver, 0.54 * ver + breakOffsetVert, 0.54 * ver, 1.00 * ver };
+            // Change coefficients for v and h to same value if they are on the sloped line.
+            double[] h = { 0.00 * hor, 0.44 * hor, 0.46 * hor,                   0.50 * hor, 0.54 * hor,                   0.56 * hor, 1.00 * hor };
+            double[] v = { 0.00 * ver, 0.44 * ver, 0.46 * ver - breakOffsetVert, 0.50 * ver, 0.54 * ver + breakOffsetVert, 0.56 * ver, 1.00 * ver };
 
+            double[] horiz_h = { 0.00 * hor, 0.44 * hor, 0.50 * hor + breakOffsetHoriz, 0.50 * hor, 0.50 * hor - breakOffsetHoriz, 0.56 * hor, 1.00 * hor };
+            double[] horiz_v = { 0.00 * ver, 0.44 * ver, 0.46 * ver                   , 0.50 * ver, 0.54 * ver                   , 0.56 * ver, 1.00 * ver };
+
+            if(hor < ver)
+            {
+                h = horiz_h;
+                v = horiz_v;
+            }
+            
             Polyline myPline2 = new Polyline();
 
             // Start of cut line
